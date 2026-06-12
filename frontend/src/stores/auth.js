@@ -1,21 +1,94 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { login as apiLogin, register as apiRegister, fetchMe } from '@/services/api'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref({
-    name: 'Maestro Alexander',
-    email: 'alexander@trms.edu',
-    role: 'Music Director',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
-    bio: 'Classical pianist and conductor with 20+ years of experience in music education.',
-    phone: '+1 (555) 123-4567',
-    department: 'Orchestra & Piano',
-    joined: '2018-09-01'
-  })
+  const user = ref(null)
+  const initialized = ref(false)
+  const error = ref(null)
+  const loading = ref(false)
+
+  const isLoggedIn = computed(() => !!user.value)
+
+  async function init() {
+    const token = localStorage.getItem('trms_token')
+    const savedUser = localStorage.getItem('trms_user')
+
+    if (token) {
+      try {
+        const freshUser = await fetchMe()
+        user.value = freshUser
+        if (savedUser) {
+          localStorage.setItem('trms_user', JSON.stringify(freshUser))
+        }
+      } catch {
+        clear()
+      }
+    }
+    initialized.value = true
+  }
+
+  async function login(email, password) {
+    loading.value = true
+    error.value = null
+    try {
+      const { token, user: fetchedUser } = await apiLogin({ email, password })
+      user.value = fetchedUser
+      localStorage.setItem('trms_token', token)
+      localStorage.setItem('trms_user', JSON.stringify(fetchedUser))
+      return true
+    } catch (e) {
+      error.value = e.response?.data?.message || 'Login failed'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function register(payload) {
+    loading.value = true
+    error.value = null
+    try {
+      const { token, user: fetchedUser } = await apiRegister(payload)
+      user.value = fetchedUser
+      localStorage.setItem('trms_token', token)
+      localStorage.setItem('trms_user', JSON.stringify(fetchedUser))
+      return true
+    } catch (e) {
+      error.value = e.response?.data?.errors ? Object.values(e.response?.data?.errors).join(', ') : e.response?.data?.message || 'Registration failed'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
 
   function updateProfile(data) {
     user.value = { ...user.value, ...data }
+    localStorage.setItem('trms_user', JSON.stringify(user.value))
   }
 
-  return { user, updateProfile }
+  function clear() {
+    user.value = null
+    error.value = null
+    localStorage.removeItem('trms_token')
+    localStorage.removeItem('trms_user')
+  }
+
+  function logout() {
+    clear()
+  }
+
+  return {
+    user,
+    error,
+    loading,
+    initialized,
+    isLoggedIn,
+    init,
+    login,
+    register,
+    logout,
+    clear,
+    updateProfile,
+  }
 })

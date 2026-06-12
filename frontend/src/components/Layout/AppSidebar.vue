@@ -17,10 +17,10 @@
 
         <div class="mt-auto pt-3 border-top border-secondary">
             <div class="d-flex align-items-center px-2">
-                <img :src="auth.user.avatar" class="rounded-circle me-2 animate-float" width="35" height="35" alt="User">
+                <img :src="user?.avatar || defaultAvatar" class="rounded-circle me-2 animate-float" width="35" height="35" alt="User">
                 <div class="overflow-hidden">
-                    <div class="text-white small text-truncate">{{ auth.user.name }}</div>
-                    <div class="text-white-50 smaller text-truncate" style="font-size: 0.75rem;">{{ auth.user.role }}
+                    <div class="text-white small text-truncate">{{ auth.user?.name || 'User' }}</div>
+                    <div class="text-white-50 smaller text-truncate" style="font-size: 0.75rem;">{{ auth.user?.role || '' }}
                     </div>
                 </div>
             </div>
@@ -30,10 +30,12 @@
 
 <script setup>
 import { useAuthStore } from '@/stores/auth'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 
 const auth = useAuthStore()
 const isOpen = ref(false)
+const defaultAvatar = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 24 24" fill="%23d4af37"%3E%3Cpath d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/%3E%3C/svg%3E'
+const user = computed(() => auth.user)
 
 const menuItems = [
     { name: 'Dashboard', path: '/', icon: 'bi bi-grid' },

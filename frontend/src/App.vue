@@ -1,28 +1,43 @@
 <template>
   <div class="app-wrapper">
-    <div class="row g-0">
-      <div class="col-auto">
-        <AppSidebar />
-      </div>
-      <div class="col">
-        <div class="main-content">
-          <AppTopbar />
-          <div class="p-4">
-            <router-view v-slot="{ Component }">
-              <transition name="fade" mode="out-in">
-                <component :is="Component" />
-              </transition>
-            </router-view>
+    <template v-if="isGuestPage">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </template>
+
+    <template v-else>
+      <div class="row g-0">
+        <div class="col-auto">
+          <AppSidebar />
+        </div>
+        <div class="col">
+          <div class="main-content">
+            <AppTopbar />
+            <div class="p-4">
+              <router-view v-slot="{ Component }">
+                <transition name="fade" mode="out-in">
+                  <component :is="Component" />
+                </transition>
+              </router-view>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import AppSidebar from './components/Layout/AppSidebar.vue'
 import AppTopbar from './components/Layout/AppTopbar.vue'
+
+const route = useRoute()
+const isGuestPage = computed(() => route.meta.guest === true)
 </script>
 
 <style scoped>

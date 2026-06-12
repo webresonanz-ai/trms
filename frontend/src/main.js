@@ -9,6 +9,12 @@ import 'bootstrap-icons/font/bootstrap-icons.css'
 import './assets/styles/custom.scss'
 
 const app = createApp(App)
-app.use(createPinia())
+const pinia = createPinia()
+app.use(pinia)
 app.use(router)
+
+import { useAuthStore } from '@/stores/auth'
+const auth = useAuthStore()
+auth.init()
+
 app.mount('#app')

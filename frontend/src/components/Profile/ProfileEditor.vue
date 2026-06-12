@@ -2,7 +2,7 @@
     <div class="card-luxury p-4 animate-fade-in-up">
         <div class="text-center mb-4">
             <div class="position-relative d-inline-block">
-                <img :src="user.avatar" class="rounded-circle mb-3" width="120" height="120"
+                <img :src="user?.avatar" class="rounded-circle mb-3" width="120" height="120"
                     style="border: 3px solid #d4af37; transition: all 0.3s ease;"
                     :class="{ 'animate-pulse': hoveringAvatar }">
                 <button class="btn btn-luxury btn-sm position-absolute bottom-0 end-0 rounded-circle avatar-upload"
@@ -12,11 +12,11 @@
                     <i class="bi bi-camera"></i>
                 </button>
             </div>
-            <h4 class="brand-font mb-1">{{ user.name }}</h4>
-            <p class="text-gold mb-0">{{ user.role }}</p>
+            <h4 class="brand-font mb-1">{{ user?.name }}</h4>
+            <p class="text-gold mb-0">{{ user?.role }}</p>
         </div>
 
-        <form @submit.prevent="save">
+        <form @submit.prevent="handleSave">
             <div class="row">
                 <div v-for="field in fields" :key="field.key" class="col-md-6 mb-3">
                     <label class="form-label text-white-50 small">{{ field.label }}</label>
@@ -28,7 +28,10 @@
                         placeholder="Tell us about yourself..."></textarea>
                 </div>
             </div>
-            <div class="d-flex justify-content-end">
+            <div class="d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-outline-luxury" @click="handleLogout">
+                    <i class="bi bi-box-arrow-right me-2"></i>Logout
+                </button>
                 <button type="submit" class="btn btn-luxury" :disabled="saving">
                     <i class="bi bi-check-lg me-2"></i>
                     {{ saving ? 'Saving...' : 'Save Changes' }}
@@ -39,11 +42,13 @@
 </template>
 
 <script setup>
-import { reactive, watch, ref } from 'vue'
+import { computed, reactive, watch, ref } from 'vue'
+import { useProfileStore } from '@/stores/profile'
 import { useAuthStore } from '@/stores/auth'
 
+const profile = useProfileStore()
 const auth = useAuthStore()
-const saving = ref(false)
+const saving = computed(() => profile.saving)
 const hoveringAvatar = ref(false)
 
 const fields = [
@@ -53,18 +58,26 @@ const fields = [
     { key: 'department', label: 'Department', type: 'text' }
 ]
 
-const user = auth.user
-const form = reactive({ ...auth.user })
+const user = computed(() => profile.user)
+const form = reactive({ ...profile.user })
 
-watch(() => auth.user, (newUser) => {
-    Object.assign(form, newUser)
+watch(() => profile.user, (newUser) => {
+    if (newUser) {
+        Object.assign(form, newUser)
+    }
 }, { deep: true })
 
-async function save() {
-    saving.value = true
-    await new Promise(resolve => setTimeout(resolve, 500))
-    auth.updateProfile({ ...form })
-    saving.value = false
+async function handleSave() {
+    try {
+        await profile.save({ ...form })
+        auth.updateProfile({ ...form })
+    } catch {
+        // Error shown via profile.error
+    }
+}
+
+function handleLogout() {
+    auth.logout()
 }
 </script>
 

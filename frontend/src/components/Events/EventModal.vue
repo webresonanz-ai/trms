@@ -7,6 +7,7 @@
                     <button type="button" class="btn-close btn-close-white" @click="emit('close')"></button>
                 </div>
                 <div class="modal-body">
+                    <div v-if="error" class="alert alert-danger small py-2 mb-3">{{ error }}</div>
                     <form @submit.prevent="submit">
                         <div class="mb-3">
                             <label class="form-label text-white-50 small">Event Title</label>
@@ -40,8 +41,11 @@
                             </select>
                         </div>
                         <div class="d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-outline-luxury" @click="emit('close')">Cancel</button>
-                            <button type="submit" class="btn btn-luxury">Save Event</button>
+                            <button type="button" class="btn btn-outline-luxury" :disabled="saving" @click="emit('close')">Cancel</button>
+                            <button type="submit" class="btn btn-luxury" :disabled="saving">
+                                <span v-if="saving" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Save Event
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -51,24 +55,33 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
-import { useEventStore } from '@/stores/events'
+import { reactive, watch } from 'vue'
 
-const emit = defineEmits(['close'])
+const props = defineProps({
+    show: { type: Boolean, default: false },
+    saving: { type: Boolean, default: false },
+    error: { type: String, default: null },
+    initialForm: { type: Object, default: () => ({}) }
+})
 
-const eventStore = useEventStore()
+const emit = defineEmits(['close', 'submit'])
 
-const form = reactive({
+const formDefaults = {
     title: '',
     date: '',
     time: '',
     venue: '',
     type: 'concert'
-})
+}
+
+const form = reactive({ ...formDefaults })
+
+watch(() => props.initialForm, (value) => {
+    Object.assign(form, formDefaults, value || {})
+}, { immediate: true })
 
 function submit() {
-    eventStore.addEvent({ ...form })
-    emit('close')
-    Object.assign(form, { title: '', date: '', time: '', venue: '', type: 'concert' })
+    if (props.saving) return
+    emit('submit', form)
 }
 </script>

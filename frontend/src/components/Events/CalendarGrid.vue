@@ -44,7 +44,8 @@
                     <div class="rounded-circle bg-gold p-1 me-3" style="width: 8px; height: 8px;"></div>
                     <div class="flex-grow-1">
                         <div class="small fw-medium">{{ event.title }}</div>
-                        <div class="text-white-50" style="font-size: 0.75rem;">{{ event.time }} • {{ event.venue }}</div>
+                        <div class="text-white-50" style="font-size: 0.75rem;">{{ event.time }} • {{ event.venue }}
+                        </div>
                     </div>
                     <span class="badge bg-opacity-25 border" :class="eventTypeClass(event.type)">{{ event.type }}</span>
                 </div>
@@ -54,7 +55,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, unref } from 'vue'
 import { useEventStore } from '@/stores/events'
 
 const eventStore = useEventStore()
@@ -68,9 +69,14 @@ const currentMonthName = computed(() => {
 
 const currentYear = computed(() => currentDate.value.getFullYear())
 
-const selectedDate = computed(() => eventStore.selectedDate)
+const selectedDate = computed(() => unref(eventStore.selectedDate))
 
-const selectedEvents = computed(() => eventStore.eventsForDate)
+const selectedEvents = computed(() => unref(eventStore.eventsForDate))
+
+const allEvents = computed(() => {
+    const events = unref(eventStore.events)
+    return Array.isArray(events) ? events : []
+})
 
 const calendarDays = computed(() => {
     const year = currentDate.value.getFullYear()
@@ -80,19 +86,19 @@ const calendarDays = computed(() => {
     const startDate = new Date(year, month, 1 - firstDay.getDay())
 
     const days = []
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toLocaleDateString('en-CA')
 
     for (let i = 0; i < 42; i++) {
         const date = new Date(startDate)
         date.setDate(startDate.getDate() + i)
-        const dateStr = date.toISOString().split('T')[0]
+        const dateStr = date.toLocaleDateString('en-CA')
 
         days.push({
             date: dateStr,
             day: date.getDate(),
             isCurrentMonth: date.getMonth() === month,
             isToday: dateStr === today,
-            hasEvent: eventStore.events.some(e => e.date === dateStr)
+            hasEvent: allEvents.value.some(e => e.date === dateStr)
         })
     }
 
@@ -126,28 +132,38 @@ function eventTypeClass(type) {
 
 <style scoped>
 .calendar-move {
-  transition: transform 0.3s ease;
+    transition: transform 0.3s ease;
 }
 
 .calendar-enter-active,
 .calendar-leave-active {
-  transition: all 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .calendar-enter-from,
 .calendar-leave-to {
-  opacity: 0;
-  transform: scale(0.9);
+    opacity: 0;
+    transform: scale(0.9);
 }
 
 .slide-fade-enter-active,
 .slide-fade-leave-active {
-  transition: all 0.3s ease;
+    transition: all 0.3s ease;
+}
+
+.calendar-day.has-event::after {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 6px;
+    background-color: #d4af37;
+    border-radius: 50%;
+    margin-top: 4px;
 }
 
 .slide-fade-enter-from,
 .slide-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
+    opacity: 0;
+    transform: translateY(-10px);
 }
 </style>

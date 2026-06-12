@@ -1,17 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { fetchEvents, createEvent as apiCreateEvent, deleteEvent as apiDeleteEvent } from '@/services/api'
 
 export const useEventStore = defineStore('events', () => {
-  const events = ref([
-    { id: 1, title: 'Spring Concert', date: '2026-06-15', type: 'concert', time: '19:00', venue: 'Grand Hall' },
-    { id: 2, title: 'Piano Masterclass', date: '2026-06-18', type: 'class', time: '14:00', venue: 'Studio A' },
-    { id: 3, title: 'Orchestra Rehearsal', date: '2026-06-20', type: 'rehearsal', time: '10:00', venue: 'Rehearsal Room' },
-    { id: 4, title: 'Student Recital', date: '2026-06-22', type: 'recital', time: '16:00', venue: 'Concert Hall' },
-    { id: 5, title: 'Faculty Meeting', date: '2026-06-25', type: 'meeting', time: '09:00', venue: 'Conference Room' },
-    { id: 6, title: 'Violin Workshop', date: '2026-06-28', type: 'workshop', time: '13:00', venue: 'Studio B' }
-  ])
-
-  const selectedDate = ref(new Date().toISOString().split('T')[0])
+  const events = ref([])
+  const selectedDate = ref(new Date().toLocaleDateString('en-CA'))
+  const loading = ref(false)
+  const error = ref(null)
 
   const eventsForDate = computed(() => {
     return events.value.filter(e => e.date === selectedDate.value)
@@ -22,17 +17,53 @@ export const useEventStore = defineStore('events', () => {
     return events.value.filter(e => new Date(e.date).getMonth() === month)
   })
 
-  function addEvent(event) {
-    events.value.push({ ...event, id: Date.now() })
+  async function load() {
+    loading.value = true
+    error.value = null
+    try {
+      events.value = await fetchEvents()
+    } catch (e) {
+      error.value = e.response?.data?.message || 'Failed to load events'
+    } finally {
+      loading.value = false
+    }
   }
 
-  function deleteEvent(id) {
-    events.value = events.value.filter(e => e.id !== id)
+  async function addEvent(event) {
+    try {
+      const created = await apiCreateEvent(event)
+      events.value.push(created)
+      return created
+    } catch (e) {
+      // Prefer detailed validation errors when available
+      const resp = e.response?.data
+      if (resp?.errors) {
+        error.value = Object.values(resp.errors).join(', ')
+      } else if (resp?.message) {
+        error.value = resp.message
+      } else {
+        error.value = 'Failed to create event'
+      }
+      // log full response for easier debugging
+      // eslint-disable-next-line no-console
+      console.error('Create event failed:', e.response || e)
+      throw e
+    }
+  }
+
+  async function deleteEvent(id) {
+    try {
+      await apiDeleteEvent(id)
+      events.value = events.value.filter(e => e.id !== id)
+    } catch (e) {
+      error.value = e.response?.data?.message || 'Failed to delete event'
+      throw e
+    }
   }
 
   function setSelectedDate(date) {
     selectedDate.value = date
   }
 
-  return { events, selectedDate, eventsForDate, eventsByMonth, addEvent, deleteEvent, setSelectedDate }
+  return { events, selectedDate, eventsForDate, eventsByMonth, addEvent, deleteEvent, setSelectedDate, load }
 })
